@@ -1,0 +1,128 @@
+version: "3.8"
+
+services:
+  # ─── PostgreSQL ───────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: devduel-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: devduel
+      POSTGRES_USER: devduel_user
+      POSTGRES_PASSWORD: devduel_secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devduel_user -d devduel"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Redis ────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: devduel-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Judge0 CE ────────────────────────────────────
+  judge0-server:
+    image: judge0/judge0-ce:1.13.1
+    container_name: devduel-judge0
+    restart: unless-stopped
+    ports:
+      - "2358:2358"
+    privileged: true
+    environment:
+      POSTGRES_HOST: judge0-db
+      POSTGRES_DB: judge0
+      POSTGRES_USER: judge0
+      POSTGRES_PASSWORD: judge0_secret
+      REDIS_HOST: judge0-redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ""
+      # Sandbox limits
+      CPU_TIME_LIMIT: 5
+      CPU_EXTRA_TIME: 1
+      WALL_TIME_LIMIT: 10
+      MEMORY_LIMIT: 256000
+      STACK_LIMIT: 128000
+      MAX_PROCESSES_AND_OR_THREADS: 60
+      ENABLE_WAIT_RESULT: "true"
+      ENABLE_COMPILER_OPTIONS: "true"
+    depends_on:
+      judge0-db:
+        condition: service_healthy
+      judge0-redis:
+        condition: service_healthy
+      judge0-workers:
+        condition: service_started
+
+  judge0-workers:
+    image: judge0/judge0-ce:1.13.1
+    container_name: devduel-judge0-workers
+    restart: unless-stopped
+    privileged: true
+    command: ["./scripts/workers"]
+    environment:
+      POSTGRES_HOST: judge0-db
+      POSTGRES_DB: judge0
+      POSTGRES_USER: judge0
+      POSTGRES_PASSWORD: judge0_secret
+      REDIS_HOST: judge0-redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ""
+      CPU_TIME_LIMIT: 5
+      CPU_EXTRA_TIME: 1
+      WALL_TIME_LIMIT: 10
+      MEMORY_LIMIT: 256000
+      STACK_LIMIT: 128000
+      MAX_PROCESSES_AND_OR_THREADS: 60
+    depends_on:
+      judge0-db:
+        condition: service_healthy
+      judge0-redis:
+        condition: service_healthy
+
+  # Judge0's own Postgres (separate from app DB)
+  judge0-db:
+    image: postgres:16-alpine
+    container_name: devduel-judge0-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: judge0
+      POSTGRES_USER: judge0
+      POSTGRES_PASSWORD: judge0_secret
+    volumes:
+      - judge0-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U judge0 -d judge0"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Judge0's own Redis (separate from app Redis)
+  judge0-redis:
+    image: redis:7-alpine
+    container_name: devduel-judge0-redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+  redisdata:
+  judge0-pgdata:
