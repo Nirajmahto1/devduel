@@ -1,33 +1,41 @@
 const router = require('express').Router();
+const passport = require('passport');
+const authController = require('../controllers/auth.controller');
+const { authenticate } = require('../middleware/auth.middleware');
 
 // POST /api/auth/register
-router.post('/register', async (req, res, next) => {
-  // TODO: Implement registration
-  res.status(501).json({ message: 'Register — not implemented yet' });
-});
+router.post('/register', authController.register);
 
 // POST /api/auth/login
-router.post('/login', async (req, res, next) => {
-  // TODO: Implement login
-  res.status(501).json({ message: 'Login — not implemented yet' });
-});
-
-// GET /api/auth/google
-router.get('/google', (req, res) => {
-  // TODO: Passport Google OAuth
-  res.status(501).json({ message: 'Google OAuth — not implemented yet' });
-});
-
-// GET /api/auth/github
-router.get('/github', (req, res) => {
-  // TODO: Passport GitHub OAuth
-  res.status(501).json({ message: 'GitHub OAuth — not implemented yet' });
-});
+router.post('/login', authController.login);
 
 // POST /api/auth/refresh
-router.post('/refresh', async (req, res, next) => {
-  // TODO: Token refresh
-  res.status(501).json({ message: 'Token refresh — not implemented yet' });
-});
+router.post('/refresh', authenticate, authController.refreshToken);
+
+// GET /api/auth/google
+router.get(
+  '/google',
+  passport.authenticate('google', { scope: ['profile', 'email'], session: false })
+);
+
+// GET /api/auth/google/callback
+router.get(
+  '/google/callback',
+  passport.authenticate('google', { session: false, failureRedirect: '/login' }),
+  authController.oauthCallback
+);
+
+// GET /api/auth/github
+router.get(
+  '/github',
+  passport.authenticate('github', { scope: ['user:email'], session: false })
+);
+
+// GET /api/auth/github/callback
+router.get(
+  '/github/callback',
+  passport.authenticate('github', { session: false, failureRedirect: '/login' }),
+  authController.oauthCallback
+);
 
 module.exports = router;
