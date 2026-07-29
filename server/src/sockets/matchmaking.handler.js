@@ -1,37 +1,60 @@
 const logger = require('../utils/logger');
+const matchmakingService = require('../services/matchmaking.service');
+const roomService = require('../services/room.service');
 
-/**
- * Matchmaking Socket Events
- *
- * Events emitted by client:
- *   queue:join    { userId, rating }
- *   queue:leave   { userId }
- *
- * Events emitted by server:
- *   queue:waiting    { position }
- *   queue:matched    { roomId, opponent: { id, username, rating } }
- *   queue:error      { message }
- */
 module.exports = function matchmakingHandler(io, socket) {
 
-  socket.on('queue:join', async (data) => {
+  socket.on('queue:join', async (data = {}) => {
     try {
-      logger.info(`[Matchmaking] ${socket.id} joining queue`, data);
-      // TODO: Add to Redis sorted set by rating
-      // TODO: Attempt to find match within ±150 Elo band
-      // TODO: If match found → create room, emit queue:matched to both
-      // TODO: If no match → emit queue:waiting with position
-      socket.emit('queue:waiting', { position: 1 });
+      const userId = socket.user ? socket.user.id : data.userId;
+      if (!userId) {
+        return socket.emit('queue:error', { message: 'User ID is required' });
+      }
+
+      logger.info(`[Matchmaking] ${socket.user?.username || userId} joining queue`);
+      await matchmakingService.addToQueue(userId, socket.id);
+      socket.emit('queue:waiting', { position: 1, message: 'Searching for an opponent...' });
+
+      // Scan for match
+      const match = await matchmakingService.findMatch(userId);
+      if (match) {
+        // Initialize room state
+        await roomService.initRoomState(match.roomId, match);
+
+        // Notify Player 1
+        io.to(match.player1.socketId).emit('queue:matched', {
+          roomId: match.roomId,
+          opponent: {
+            id: match.player2.userId,
+            username: match.player2.username,
+            rating: match.player2.rating,
+          },
+        });
+
+        // Notify Player 2
+        io.to(match.player2.socketId).emit('queue:matched', {
+          roomId: match.roomId,
+          opponent: {
+            id: match.player1.userId,
+            username: match.player1.username,
+            rating: match.player1.rating,
+          },
+        });
+      }
     } catch (error) {
       logger.error('[Matchmaking] queue:join error:', error.message);
-      socket.emit('queue:error', { message: 'Failed to join queue' });
+      socket.emit('queue:error', { message: error.message || 'Failed to join queue' });
     }
   });
 
-  socket.on('queue:leave', async (data) => {
+  socket.on('queue:leave', async (data = {}) => {
     try {
-      logger.info(`[Matchmaking] ${socket.id} leaving queue`, data);
-      // TODO: Remove from Redis sorted set
+      const userId = socket.user ? socket.user.id : data.userId;
+      if (userId) {
+        logger.info(`[Matchmaking] ${socket.user?.username || userId} leaving queue`);
+        await matchmakingService.removeFromQueue(userId);
+        socket.emit('queue:left', { success: true });
+      }
     } catch (error) {
       logger.error('[Matchmaking] queue:leave error:', error.message);
     }
