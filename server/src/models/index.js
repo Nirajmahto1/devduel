@@ -1,3 +1,13 @@
-// Models placeholder — Knex query builders for each table
-// TODO: Implement model methods (findById, create, update, etc.)
-module.exports = {};
+const User = require('./user.model');
+const Problem = require('./problem.model');
+const TestCase = require('./testCase.model');
+const Match = require('./match.model');
+const Submission = require('./submission.model');
+
+module.exports = {
+  User,
+  Problem,
+  TestCase,
+  Match,
+  Submission,
+};
