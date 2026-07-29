@@ -1,3 +1,18 @@
+// Mock redis before requiring room.service
+const mockStorage = new Map();
+
+jest.mock('../src/config/redis', () => ({
+  getRedisClient: jest.fn(() => ({
+    set: jest.fn(async (key, val) => mockStorage.set(key, val)),
+    setex: jest.fn(async (key, ttl, val) => mockStorage.set(key, val)),
+    get: jest.fn(async (key) => mockStorage.get(key) || null),
+    del: jest.fn(async (key) => mockStorage.delete(key)),
+    ping: jest.fn(async () => 'PONG'),
+    disconnect: jest.fn(),
+  })),
+  connectRedis: jest.fn(async () => {}),
+}));
+
 const { initRoomState, getRoomState, updateRoomState } = require('../src/services/room.service');
 
 describe('Room & Socket Integration Unit Tests', () => {
@@ -11,26 +26,17 @@ describe('Room & Socket Integration Unit Tests', () => {
       durationSeconds: 1800,
     };
 
-    // Mock Redis get/set if Redis container is offline
-    const redisModule = require('../src/config/redis');
-    const mockRedis = {
-      setex: jest.fn().mockResolvedValue('OK'),
-      get: jest.fn().mockResolvedValue(JSON.stringify({
-        roomId: 'm-test-101',
-        ...matchData,
-        status: 'waiting',
-        connectedPlayers: [],
-      })),
-    };
-    jest.spyOn(redisModule, 'getRedisClient').mockReturnValue(mockRedis);
-
     const room = await initRoomState('m-test-101', matchData);
     expect(room).toBeDefined();
     expect(room.roomId).toBe('m-test-101');
     expect(room.player1.username).toBe('player1');
 
     const fetched = await getRoomState('m-test-101');
+    expect(fetched).toBeDefined();
     expect(fetched.matchId).toBe('m-test-101');
+
+    const updated = await updateRoomState('m-test-101', { status: 'active' });
+    expect(updated.status).toBe('active');
   });
 
 });
