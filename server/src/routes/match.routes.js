@@ -1,22 +1,17 @@
 const router = require('express').Router();
+const matchController = require('../controllers/match.controller');
 const { authenticate } = require('../middleware/auth.middleware');
 
-// GET /api/matches/:id — match details
-router.get('/:id', authenticate, async (req, res) => {
-  // TODO: Return match details, players, result
-  res.status(501).json({ message: 'Match detail — not implemented yet' });
-});
+// POST /api/matches/private — Protected: Create private room with invite code
+router.post('/private', authenticate, matchController.createPrivateRoom);
 
-// POST /api/matches/private — create private room
-router.post('/private', authenticate, async (req, res) => {
-  // TODO: Create a private duel room with invite code
-  res.status(501).json({ message: 'Create private room — not implemented yet' });
-});
+// POST /api/matches/join — Protected: Join via invite code in body
+router.post('/join', authenticate, matchController.joinPrivateRoom);
 
-// POST /api/matches/:id/join — join via invite code
-router.post('/:id/join', authenticate, async (req, res) => {
-  // TODO: Join private room
-  res.status(501).json({ message: 'Join room — not implemented yet' });
-});
+// POST /api/matches/:id/join — Protected: Join via invite code / match ID in URL
+router.post('/:id/join', authenticate, matchController.joinPrivateRoom);
+
+// GET /api/matches/:id — Protected: Match details & results
+router.get('/:id', authenticate, matchController.getMatchDetails);
 
 module.exports = router;

@@ -1,28 +1,17 @@
 const router = require('express').Router();
+const userController = require('../controllers/user.controller');
 const { authenticate } = require('../middleware/auth.middleware');
 
-// GET /api/users/me — current user profile
-router.get('/me', authenticate, async (req, res) => {
-  // TODO: Return current user profile
-  res.json({ user: req.user });
-});
+// GET /api/users/me — Protected: Get current profile
+router.get('/me', authenticate, userController.getProfile);
 
-// GET /api/users/:id — public profile
-router.get('/:id', async (req, res) => {
-  // TODO: Return public user profile
-  res.status(501).json({ message: 'User profile — not implemented yet' });
-});
+// PATCH /api/users/me — Protected: Update profile
+router.patch('/me', authenticate, userController.updateProfile);
 
-// PATCH /api/users/me — update profile
-router.patch('/me', authenticate, async (req, res) => {
-  // TODO: Update user profile
-  res.status(501).json({ message: 'Update profile — not implemented yet' });
-});
+// GET /api/users/:id — Public: Get user profile by ID or username
+router.get('/:id', userController.getPublicProfile);
 
-// GET /api/users/:id/matches — user match history
-router.get('/:id/matches', async (req, res) => {
-  // TODO: Return match history
-  res.status(501).json({ message: 'Match history — not implemented yet' });
-});
+// GET /api/users/:id/matches — Public: Get user's match history
+router.get('/:id/matches', userController.getUserMatches);
 
 module.exports = router;

@@ -1,16 +1,15 @@
 const router = require('express').Router();
+const submissionController = require('../controllers/submission.controller');
 const { authenticate } = require('../middleware/auth.middleware');
+const { submissionRateLimiter } = require('../middleware/rateLimiter.middleware');
 
-// POST /api/submissions — submit code for judging
-router.post('/', authenticate, async (req, res) => {
-  // TODO: Send code to Judge0 and return verdict
-  res.status(501).json({ message: 'Submit code — not implemented yet' });
-});
+// POST /api/submissions — Protected: Submit code for judging
+router.post('/', authenticate, submissionRateLimiter, submissionController.submitCode);
 
-// GET /api/submissions/:id — submission detail
-router.get('/:id', authenticate, async (req, res) => {
-  // TODO: Return submission verdict & details
-  res.status(501).json({ message: 'Submission detail — not implemented yet' });
-});
+// GET /api/submissions — Protected: List user's submissions
+router.get('/', authenticate, submissionController.getUserSubmissions);
+
+// GET /api/submissions/:id — Protected: Submission detail
+router.get('/:id', authenticate, submissionController.getSubmissionById);
 
 module.exports = router;
