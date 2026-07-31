@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
+import api from '../services/api';
 import MonacoEditorWrapper from '../components/Editor/MonacoEditor';
 import VerdictModal from '../components/Duel/VerdictModal';
 import {
@@ -83,16 +84,40 @@ export default function DuelRoomPage() {
   const [verdictModalOpen, setVerdictModalOpen] = useState(false);
 
   useEffect(() => {
+    fetchMatchDetails();
+  }, [roomId]);
+
+  const fetchMatchDetails = async () => {
+    try {
+      const res = await api.get(`/matches/${roomId}`);
+      if (res.success && res.data) {
+        if (res.data.duration_seconds) {
+          setSecondsRemaining(res.data.duration_seconds);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load match details:', err);
+    }
+  };
+
+  useEffect(() => {
     if (!socket || !isConnected) return;
 
     // Join duel room
     socket.emit('room:join', { roomId, userId: user?.id });
 
     // ─── Socket Event Listeners ───────────────────────
+    socket.on('room:info', (data) => {
+      if (data.problem) setProblem(data.problem);
+      if (data.players) setPlayers(data.players);
+      const initSecs = data.secondsRemaining || data.durationSeconds;
+      if (initSecs) setSecondsRemaining(initSecs);
+    });
+
     socket.on('room:ready', (data) => {
-      setProblem(data.problem);
-      setPlayers(data.players);
-      setSecondsRemaining(data.durationSeconds || 1800);
+      if (data.problem) setProblem(data.problem);
+      if (data.players) setPlayers(data.players);
+      if (data.durationSeconds) setSecondsRemaining(data.durationSeconds);
     });
 
     socket.on('room:countdown', (data) => {
@@ -127,6 +152,7 @@ export default function DuelRoomPage() {
 
     return () => {
       socket.emit('room:leave', { roomId });
+      socket.off('room:info');
       socket.off('room:ready');
       socket.off('room:countdown');
       socket.off('opponent:update');
@@ -213,7 +239,7 @@ export default function DuelRoomPage() {
 
           <button
             onClick={() => navigate('/dashboard')}
-            className="px-2.5 py-1 rounded-lg border border-slate-300 text-xs font-semibold text-slate-600 hover:bg-slate-200 transition-colors"
+            className="px-2.5 py-1 rounded-lg border border-slate-300 text-xs font-semibold text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer"
           >
             Leave
           </button>
@@ -224,7 +250,7 @@ export default function DuelRoomPage() {
       <div className="lg:hidden flex bg-white border-b border-slate-200 px-2 py-1 text-xs font-bold text-slate-600 shrink-0">
         <button
           onClick={() => setMobileActivePane('problem')}
-          className={`flex-1 py-1.5 text-center rounded-lg flex items-center justify-center gap-1.5 transition-colors ${
+          className={`flex-1 py-1.5 text-center rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
             mobileActivePane === 'problem' ? 'bg-indigo-50 text-indigo-600 font-extrabold' : 'hover:bg-slate-50'
           }`}
         >
@@ -233,7 +259,7 @@ export default function DuelRoomPage() {
         </button>
         <button
           onClick={() => setMobileActivePane('editor')}
-          className={`flex-1 py-1.5 text-center rounded-lg flex items-center justify-center gap-1.5 transition-colors ${
+          className={`flex-1 py-1.5 text-center rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
             mobileActivePane === 'editor' ? 'bg-indigo-50 text-indigo-600 font-extrabold' : 'hover:bg-slate-50'
           }`}
         >
@@ -243,18 +269,18 @@ export default function DuelRoomPage() {
       </div>
 
       {/* Main Responsive Workspace */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden p-2 sm:p-3 gap-2 sm:gap-3">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden p-2 sm:p-3 gap-2 sm:gap-3 min-h-0">
         {/* Left Pane: Problem Description & Sample Cases / Console */}
         <div
-          className={`w-full lg:w-1/2 flex-col glass-card rounded-2xl border border-slate-200 overflow-hidden shadow-md ${
+          className={`w-full lg:w-1/2 flex-col glass-card rounded-2xl border border-slate-200 overflow-hidden shadow-md min-h-0 ${
             mobileActivePane === 'problem' ? 'flex flex-1' : 'hidden lg:flex'
           }`}
         >
           {/* Tab Controls */}
-          <div className="flex items-center border-b border-slate-200 bg-slate-50/80 px-2">
+          <div className="flex items-center border-b border-slate-200 bg-slate-50/80 px-2 shrink-0">
             <button
               onClick={() => setActiveTab('problem')}
-              className={`px-3 sm:px-4 py-2.5 text-xs font-bold transition-all border-b-2 ${
+              className={`px-3 sm:px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer ${
                 activeTab === 'problem'
                   ? 'border-indigo-600 text-indigo-600 bg-white'
                   : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -264,7 +290,7 @@ export default function DuelRoomPage() {
             </button>
             <button
               onClick={() => setActiveTab('console')}
-              className={`px-3 sm:px-4 py-2.5 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 ${
+              className={`px-3 sm:px-4 py-2.5 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'console'
                   ? 'border-indigo-600 text-indigo-600 bg-white'
                   : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -283,7 +309,7 @@ export default function DuelRoomPage() {
           </div>
 
           {/* Tab Content Body */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-white">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-white min-h-0">
             {activeTab === 'problem' ? (
               problem ? (
                 <div className="space-y-6 text-slate-800">
@@ -396,7 +422,7 @@ export default function DuelRoomPage() {
 
         {/* Right Pane: Monaco Editor & Controls */}
         <div
-          className={`w-full lg:w-1/2 flex-col glass-card rounded-2xl border border-slate-200 overflow-hidden shadow-md ${
+          className={`w-full lg:w-1/2 flex-col glass-card rounded-2xl border border-slate-200 overflow-hidden shadow-md min-h-0 ${
             mobileActivePane === 'editor' ? 'flex flex-1' : 'hidden lg:flex'
           }`}
         >
@@ -407,7 +433,7 @@ export default function DuelRoomPage() {
               <select
                 value={language}
                 onChange={(e) => handleLanguageChange(e.target.value)}
-                className="text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-500"
+                className="text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-500 cursor-pointer"
               >
                 <option value="javascript">JavaScript (Node.js)</option>
                 <option value="python">Python 3</option>
@@ -420,7 +446,7 @@ export default function DuelRoomPage() {
           </div>
 
           {/* Monaco Editor Container */}
-          <div className="flex-1 relative min-h-[300px]">
+          <div className="flex-1 relative min-h-0">
             <MonacoEditorWrapper
               language={language}
               value={code}
@@ -433,7 +459,7 @@ export default function DuelRoomPage() {
             <button
               onClick={handleRunSampleCode}
               disabled={isRunning || isSubmitting}
-              className="py-2 px-3 sm:px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 sm:gap-2 transition-all disabled:opacity-50"
+              className="py-2 px-3 sm:px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 sm:gap-2 transition-all disabled:opacity-50 cursor-pointer"
             >
               {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-slate-700" />}
               <span>Run Sample</span>
@@ -442,7 +468,7 @@ export default function DuelRoomPage() {
             <button
               onClick={handleSubmitCode}
               disabled={isRunning || isSubmitting}
-              className="py-2 px-4 sm:px-6 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs shadow-md shadow-emerald-200 flex items-center gap-1.5 sm:gap-2 transition-all disabled:opacity-50 active:scale-95"
+              className="py-2 px-4 sm:px-6 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs shadow-md shadow-emerald-200 flex items-center gap-1.5 sm:gap-2 transition-all disabled:opacity-50 active:scale-95 cursor-pointer"
             >
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               <span>Submit Solution</span>
