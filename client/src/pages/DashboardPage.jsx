@@ -21,6 +21,7 @@ import {
   KeyRound,
   BarChart3,
   Award,
+  Clock,
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -35,10 +36,12 @@ export default function DashboardPage() {
 
   // Private Room Modal State
   const [privateModalOpen, setPrivateModalOpen] = useState(false);
+  const [durationMinutes, setDurationMinutes] = useState(30); // Default 30m, up to 60m (1h)
   const [inviteCodeInput, setInviteCodeInput] = useState('');
   const [createdRoom, setCreatedRoom] = useState(null);
   const [copied, setCopied] = useState(false);
   const [roomError, setRoomError] = useState(null);
+  const [creatingRoom, setCreatingRoom] = useState(false);
 
   useEffect(() => {
     // If URL has ?findMatch=true trigger queue automatically
@@ -78,13 +81,16 @@ export default function DashboardPage() {
 
   const handleCreatePrivateRoom = async () => {
     try {
+      setCreatingRoom(true);
       setRoomError(null);
-      const res = await api.post('/matches/private');
+      const res = await api.post('/matches/private', { durationMinutes });
       if (res.success && res.data) {
         setCreatedRoom(res.data);
       }
     } catch (err) {
       setRoomError(err.message || 'Failed to create private room');
+    } finally {
+      setCreatingRoom(false);
     }
   };
 
@@ -147,7 +153,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-3">
             <button
               onClick={joinQueue}
-              className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-sm shadow-lg shadow-indigo-200 hover:shadow-xl transition-all flex items-center gap-2.5 active:scale-95"
+              className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-sm shadow-lg shadow-indigo-200 hover:shadow-xl transition-all flex items-center gap-2.5 active:scale-95 cursor-pointer"
             >
               <Swords className="w-5 h-5" />
               <span>Find Match</span>
@@ -159,7 +165,7 @@ export default function DashboardPage() {
                 setCreatedRoom(null);
                 setRoomError(null);
               }}
-              className="px-5 py-3.5 rounded-2xl bg-white border border-slate-200/90 text-slate-700 font-semibold text-sm hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
+              className="px-5 py-3.5 rounded-2xl bg-white border border-slate-200/90 text-slate-700 font-semibold text-sm hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm cursor-pointer"
             >
               <Plus className="w-4 h-4 text-indigo-600" />
               <span>Private Room</span>
@@ -255,7 +261,7 @@ export default function DashboardPage() {
               <button
                 onClick={() => navigate(`/practice/${featuredProblem?.id}`)}
                 disabled={!featuredProblem}
-                className="w-full py-3 px-4 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full py-3 px-4 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
               >
                 <Play className="w-4 h-4 fill-indigo-700" />
                 <span>Practice Solo</span>
@@ -269,7 +275,7 @@ export default function DashboardPage() {
               <h3 className="text-lg font-bold text-slate-900 font-outfit">Recent Matches</h3>
               <button
                 onClick={() => navigate('/profile')}
-                className="text-xs font-bold text-indigo-600 hover:underline flex items-center gap-1"
+                className="text-xs font-bold text-indigo-600 hover:underline flex items-center gap-1 cursor-pointer"
               >
                 <span>View History</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -283,7 +289,7 @@ export default function DashboardPage() {
                 <p className="text-sm font-medium">No matches played yet.</p>
                 <button
                   onClick={joinQueue}
-                  className="mt-3 text-xs font-bold text-indigo-600 hover:underline"
+                  className="mt-3 text-xs font-bold text-indigo-600 hover:underline cursor-pointer"
                 >
                   Join queue for your first duel!
                 </button>
@@ -298,7 +304,7 @@ export default function DashboardPage() {
                   return (
                     <div
                       key={m.id}
-                      onClick={() => navigate(`/matches/${m.id}`)}
+                      onClick={() => navigate(`/profile`)}
                       className="p-4 rounded-2xl bg-white/70 hover:bg-white border border-slate-100 flex items-center justify-between cursor-pointer transition-all shadow-sm"
                     >
                       <div className="flex items-center gap-3">
@@ -358,7 +364,7 @@ export default function DashboardPage() {
               </h3>
               <button
                 onClick={() => setPrivateModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
+                className="text-slate-400 hover:text-slate-600 text-sm font-bold p-1 cursor-pointer"
               >
                 ✕
               </button>
@@ -379,10 +385,14 @@ export default function DashboardPage() {
                   </span>
                   <button
                     onClick={copyInviteCode}
-                    className="p-2 rounded-xl bg-white text-indigo-600 shadow-sm border border-indigo-100 hover:bg-indigo-50"
+                    className="p-2 rounded-xl bg-white text-indigo-600 shadow-sm border border-indigo-100 hover:bg-indigo-50 cursor-pointer"
                   >
                     {copied ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
                   </button>
+                </div>
+
+                <div className="text-xs text-slate-500 font-medium">
+                  Match Timer Set: <span className="font-bold text-indigo-700">{Math.round(createdRoom.durationSeconds / 60)} Mins</span>
                 </div>
 
                 <button
@@ -390,20 +400,45 @@ export default function DashboardPage() {
                     setPrivateModalOpen(false);
                     navigate(`/duel/${createdRoom.matchId}`);
                   }}
-                  className="w-full py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm shadow-md"
+                  className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md cursor-pointer transition-colors"
                 >
                   Enter Room Lobby
                 </button>
               </div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-5">
+                {/* Custom Match Duration Selector */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Select Custom Match Duration (Up to 1 Hour)</span>
+                  </label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[15, 30, 45, 60].map((mins) => (
+                      <button
+                        key={mins}
+                        type="button"
+                        onClick={() => setDurationMinutes(mins)}
+                        className={`py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                          durationMinutes === mins
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        {mins === 60 ? '1 Hour' : `${mins} Mins`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div>
                   <button
                     onClick={handleCreatePrivateRoom}
-                    className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold text-sm shadow-md shadow-indigo-200 hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                    disabled={creatingRoom}
+                    className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-sm shadow-md shadow-indigo-200 hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>Create New Private Room</span>
+                    <span>{creatingRoom ? 'Creating Room...' : 'Create New Private Room'}</span>
                   </button>
                 </div>
 
@@ -424,7 +459,7 @@ export default function DashboardPage() {
                   />
                   <button
                     type="submit"
-                    className="w-full py-3 px-4 rounded-xl bg-slate-800 text-white font-bold text-sm hover:bg-slate-900 transition-all shadow-sm"
+                    className="w-full py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm transition-all shadow-sm cursor-pointer"
                   >
                     Join Room
                   </button>

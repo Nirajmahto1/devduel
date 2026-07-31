@@ -10,6 +10,15 @@
   code, pre, .font-mono {
     font-family: 'Fira Code', monospace;
   }
+
+  button, select, input[type="button"], input[type="submit"], [role="button"], a {
+    cursor: pointer;
+  }
+}
+
+/* Ensure buttons explicitly use cursor pointer */
+button, select, [role="button"] {
+  cursor: pointer !important;
 }
 
 /* Glassmorphism Components */
