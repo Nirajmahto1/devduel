@@ -1,7 +1,7 @@
 const logger = require('../utils/logger');
 const roomService = require('../services/room.service');
 const judge0Service = require('../services/judge0.service');
-const { Problem, TestCase, Submission } = require('../models');
+const { Match, Problem, TestCase, Submission, User } = require('../models');
 
 module.exports = function roomHandler(io, socket) {
 
@@ -20,6 +20,24 @@ module.exports = function roomHandler(io, socket) {
 
       let room = await roomService.getRoomState(roomId);
       if (!room) {
+        // Fallback: If room state is not in Redis, load match from DB
+        const match = await Match.findById(roomId);
+        if (match) {
+          const problem = await Problem.findById(match.problem_id);
+          const p1 = await User.findById(match.player1_id);
+          const p2 = match.player2_id ? await User.findById(match.player2_id) : null;
+
+          room = await roomService.initRoomState(roomId, {
+            matchId: match.id,
+            player1: { userId: p1?.id, username: p1?.username, rating: p1?.rating || 1200 },
+            player2: p2 ? { userId: p2.id, username: p2.username, rating: p2.rating || 1200 } : null,
+            problem,
+            durationSeconds: match.duration_seconds || 1800,
+          });
+        }
+      }
+
+      if (!room) {
         return socket.emit('room:error', { message: 'Room not found or expired' });
       }
 
@@ -29,11 +47,14 @@ module.exports = function roomHandler(io, socket) {
         room = await roomService.updateRoomState(roomId, { connectedPlayers: room.connectedPlayers });
       }
 
-      // If both players are in room, start duel!
+      // If both players are in room, start duel with match duration!
       if (room.connectedPlayers.length >= 2 && room.status !== 'active' && room.status !== 'finished') {
+        const matchDuration = room.durationSeconds || 1800;
         room = await roomService.updateRoomState(roomId, {
           status: 'active',
           startedAt: Date.now(),
+          durationSeconds: matchDuration,
+          secondsRemaining: matchDuration,
         });
 
         // Start server timer loop
@@ -46,7 +67,20 @@ module.exports = function roomHandler(io, socket) {
             player1: room.player1,
             player2: room.player2,
           },
+          durationSeconds: matchDuration,
+          startsAt: room.startedAt,
+        });
+      } else if (room.status === 'active') {
+        // Send current room state on reconnect / page refresh
+        socket.emit('room:ready', {
+          roomId,
+          problem: room.problem,
+          players: {
+            player1: room.player1,
+            player2: room.player2,
+          },
           durationSeconds: room.durationSeconds,
+          secondsRemaining: room.secondsRemaining,
           startsAt: room.startedAt,
         });
       }

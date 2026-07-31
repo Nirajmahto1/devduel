@@ -1,4 +1,5 @@
 const { Match, Problem, User } = require('../models');
+const roomService = require('../services/room.service');
 
 async function getMatchDetails(req, res, next) {
   try {
@@ -44,6 +45,15 @@ async function createPrivateRoom(req, res, next) {
       match_type: 'private',
       player1_rating_before: user.rating,
       duration_seconds,
+    });
+
+    // Initialize room state in Redis with custom duration
+    await roomService.initRoomState(match.id, {
+      matchId: match.id,
+      player1: { userId: user.id, username: user.username, rating: user.rating },
+      player2: null,
+      problem,
+      durationSeconds: duration_seconds,
     });
 
     return res.status(201).json({
@@ -104,6 +114,11 @@ async function joinPrivateRoom(req, res, next) {
 
     const user = await User.findById(req.user.id);
     const updatedMatch = await Match.joinPrivateMatch(match.id, user.id, user.rating);
+
+    // Update player 2 details in Redis room state
+    await roomService.updateRoomState(match.id, {
+      player2: { userId: user.id, username: user.username, rating: user.rating },
+    });
 
     return res.status(200).json({
       success: true,
