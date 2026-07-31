@@ -7,23 +7,30 @@ module.exports = function matchmakingHandler(io, socket) {
   socket.on('queue:join', async (data = {}) => {
     try {
       const userId = socket.user ? socket.user.id : data.userId;
+      const durationMinutes = data.durationMinutes || 30;
+
       if (!userId) {
         return socket.emit('queue:error', { message: 'User ID is required' });
       }
 
-      logger.info(`[Matchmaking] ${socket.user?.username || userId} joining queue`);
-      await matchmakingService.addToQueue(userId, socket.id);
-      socket.emit('queue:waiting', { position: 1, message: 'Searching for an opponent...' });
+      logger.info(`[Matchmaking] ${socket.user?.username || userId} joining queue (${durationMinutes} mins)`);
+      await matchmakingService.addToQueue(userId, socket.id, durationMinutes);
+      socket.emit('queue:waiting', {
+        position: 1,
+        durationMinutes,
+        message: `Searching for an opponent (${durationMinutes}m duel)...`,
+      });
 
       // Scan for match
       const match = await matchmakingService.findMatch(userId);
       if (match) {
-        // Initialize room state
+        // Initialize room state with matched duration
         await roomService.initRoomState(match.roomId, match);
 
         // Notify Player 1
         io.to(match.player1.socketId).emit('queue:matched', {
           roomId: match.roomId,
+          durationSeconds: match.durationSeconds,
           opponent: {
             id: match.player2.userId,
             username: match.player2.username,
@@ -34,6 +41,7 @@ module.exports = function matchmakingHandler(io, socket) {
         // Notify Player 2
         io.to(match.player2.socketId).emit('queue:matched', {
           roomId: match.roomId,
+          durationSeconds: match.durationSeconds,
           opponent: {
             id: match.player1.userId,
             username: match.player1.username,
