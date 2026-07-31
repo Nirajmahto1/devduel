@@ -47,6 +47,19 @@ module.exports = function roomHandler(io, socket) {
         room = await roomService.updateRoomState(roomId, { connectedPlayers: room.connectedPlayers });
       }
 
+      // Emit initial room info to the connecting socket
+      socket.emit('room:info', {
+        roomId,
+        status: room.status,
+        durationSeconds: room.durationSeconds || 1800,
+        secondsRemaining: room.secondsRemaining || room.durationSeconds || 1800,
+        problem: room.problem,
+        players: {
+          player1: room.player1,
+          player2: room.player2,
+        },
+      });
+
       // If both players are in room, start duel with match duration!
       if (room.connectedPlayers.length >= 2 && room.status !== 'active' && room.status !== 'finished') {
         const matchDuration = room.durationSeconds || 1800;
