@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import Navbar from '../components/Layout/Navbar';
 import Footer from '../components/Layout/Footer';
-import { BookOpen, Search, Filter, Play, ChevronLeft, ChevronRight } from 'lucide-react';
+import { BookOpen, Search, Play, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function ProblemBankPage() {
   const [problems, setProblems] = useState([]);
@@ -53,7 +53,7 @@ export default function ProblemBankPage() {
               <span>Curated Problem Bank</span>
             </div>
             <h1 className="text-3xl font-extrabold text-slate-900 font-outfit">Practice & Speedcoding Library</h1>
-            <p className="text-sm text-slate-500 mt-1">Explore 100+ algorithmic problems tagged by topic and difficulty.</p>
+            <p className="text-sm text-slate-500 mt-1">Explore algorithmic problems tagged by topic and difficulty.</p>
           </div>
         </div>
 
@@ -111,9 +111,15 @@ export default function ProblemBankPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm font-medium">
                   {filteredProblems.map((p) => (
-                    <tr key={p.id} className="hover:bg-indigo-50/30 transition-colors">
+                    <tr
+                      key={p.id}
+                      onClick={() => navigate(`/practice/${p.id}`)}
+                      className="hover:bg-indigo-50/40 transition-colors cursor-pointer group"
+                    >
                       <td className="py-4 px-6">
-                        <div className="font-bold text-slate-800">{p.title}</div>
+                        <div className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors flex items-center gap-2">
+                          <span>{p.title}</span>
+                        </div>
                         <div className="text-xs text-slate-400 line-clamp-1 mt-0.5">{p.description}</div>
                       </td>
                       <td className="py-4 px-4">
@@ -143,8 +149,11 @@ export default function ProblemBankPage() {
                       </td>
                       <td className="py-4 px-6 text-right">
                         <button
-                          onClick={() => navigate(`/practice/${p.id}`)}
-                          className="px-3.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs transition-all inline-flex items-center gap-1.5"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/practice/${p.id}`);
+                          }}
+                          className="px-3.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-sm"
                         >
                           <Play className="w-3.5 h-3.5 fill-indigo-700" />
                           <span>Solve</span>
@@ -168,14 +177,14 @@ export default function ProblemBankPage() {
                 <button
                   onClick={() => fetchProblems(pagination.page - 1)}
                   disabled={pagination.page <= 1}
-                  className="p-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-40"
+                  className="p-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-40 cursor-pointer"
                 >
                   <ChevronLeft className="w-4 h-4 text-slate-600" />
                 </button>
                 <button
                   onClick={() => fetchProblems(pagination.page + 1)}
                   disabled={pagination.page >= pagination.pages}
-                  className="p-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-40"
+                  className="p-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-40 cursor-pointer"
                 >
                   <ChevronRight className="w-4 h-4 text-slate-600" />
                 </button>

@@ -21,7 +21,7 @@ export default function MonacoEditorWrapper({ language = 'javascript', value = '
   };
 
   return (
-    <div className="w-full h-full min-h-[420px] rounded-xl overflow-hidden border border-slate-200 shadow-inner bg-[#fffffe]">
+    <div className="w-full h-full min-h-0 overflow-hidden rounded-xl border border-slate-200 shadow-inner bg-[#fffffe]">
       <Editor
         height="100%"
         language={getMonacoLanguage(language)}

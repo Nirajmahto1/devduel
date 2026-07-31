@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import MonacoEditorWrapper from '../components/Editor/MonacoEditor';
-import { ArrowLeft, Play, Send, Code2, CheckCircle, XCircle, Terminal, Loader2 } from 'lucide-react';
+import { ArrowLeft, Send, Code2, Terminal, Loader2, FileText } from 'lucide-react';
 
 const DEFAULT_TEMPLATES = {
   javascript: `// Solo Practice Mode
@@ -48,6 +48,9 @@ export default function ProblemPracticePage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [verdictResult, setVerdictResult] = useState(null);
+
+  // Mobile View Switcher (problem or editor)
+  const [mobileActivePane, setMobileActivePane] = useState('editor');
 
   useEffect(() => {
     fetchProblemDetail();
@@ -95,31 +98,57 @@ export default function ProblemPracticePage() {
   return (
     <div className="h-screen flex flex-col bg-slate-100 font-sans overflow-hidden">
       {/* Header Bar */}
-      <header className="h-14 glass-nav px-4 flex items-center justify-between z-10 border-b border-slate-200">
+      <header className="h-14 glass-nav px-4 flex items-center justify-between z-10 border-b border-slate-200 shrink-0">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/problems')}
-            className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors"
+            className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <h1 className="font-extrabold text-slate-800 font-outfit text-base">
+          <h1 className="font-extrabold text-slate-800 font-outfit text-base truncate max-w-[200px] sm:max-w-none">
             {problem?.title || 'Solo Practice'}
           </h1>
-          <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+          <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 hidden sm:inline-block">
             Practice Mode
           </span>
         </div>
       </header>
 
+      {/* Mobile Screen Switcher Bar */}
+      <div className="lg:hidden flex bg-white border-b border-slate-200 px-2 py-1 text-xs font-bold text-slate-600 shrink-0">
+        <button
+          onClick={() => setMobileActivePane('problem')}
+          className={`flex-1 py-1.5 text-center rounded-lg flex items-center justify-center gap-1.5 transition-colors ${
+            mobileActivePane === 'problem' ? 'bg-indigo-50 text-indigo-600 font-extrabold' : 'hover:bg-slate-50'
+          }`}
+        >
+          <FileText className="w-3.5 h-3.5" />
+          <span>Problem Info</span>
+        </button>
+        <button
+          onClick={() => setMobileActivePane('editor')}
+          className={`flex-1 py-1.5 text-center rounded-lg flex items-center justify-center gap-1.5 transition-colors ${
+            mobileActivePane === 'editor' ? 'bg-indigo-50 text-indigo-600 font-extrabold' : 'hover:bg-slate-50'
+          }`}
+        >
+          <Code2 className="w-3.5 h-3.5" />
+          <span>Code Editor</span>
+        </button>
+      </div>
+
       {/* Split Pane */}
-      <div className="flex-1 flex overflow-hidden p-3 gap-3">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden p-2 sm:p-3 gap-2 sm:gap-3 min-h-0">
         {/* Left Pane: Description */}
-        <div className="w-1/2 flex flex-col glass-card rounded-2xl border border-slate-200 overflow-hidden shadow-md">
-          <div className="flex items-center border-b border-slate-200 bg-slate-50/80 px-2">
+        <div
+          className={`w-full lg:w-1/2 flex-col glass-card rounded-2xl border border-slate-200 overflow-hidden shadow-md min-h-0 ${
+            mobileActivePane === 'problem' ? 'flex flex-1' : 'hidden lg:flex'
+          }`}
+        >
+          <div className="flex items-center border-b border-slate-200 bg-slate-50/80 px-2 shrink-0">
             <button
               onClick={() => setActiveTab('problem')}
-              className={`px-4 py-2.5 text-xs font-bold transition-all border-b-2 ${
+              className={`px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer ${
                 activeTab === 'problem' ? 'border-indigo-600 text-indigo-600 bg-white' : 'border-transparent text-slate-500'
               }`}
             >
@@ -127,7 +156,7 @@ export default function ProblemPracticePage() {
             </button>
             <button
               onClick={() => setActiveTab('console')}
-              className={`px-4 py-2.5 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 ${
+              className={`px-4 py-2.5 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'console' ? 'border-indigo-600 text-indigo-600 bg-white' : 'border-transparent text-slate-500'
               }`}
             >
@@ -136,25 +165,25 @@ export default function ProblemPracticePage() {
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-6 bg-white">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-white min-h-0">
             {activeTab === 'problem' ? (
               loading ? (
                 <div className="py-20 text-center text-slate-400">Loading problem details...</div>
               ) : (
                 <div className="space-y-6 text-slate-800">
                   <div>
-                    <h2 className="text-2xl font-extrabold font-outfit text-slate-900">{problem?.title}</h2>
+                    <h2 className="text-xl sm:text-2xl font-extrabold font-outfit text-slate-900">{problem?.title}</h2>
                     <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 capitalize mt-2 inline-block">
                       {problem?.difficulty}
                     </span>
                   </div>
 
-                  <div className="prose prose-sm max-w-none text-slate-700 bg-slate-50 p-4 rounded-xl border border-slate-100 leading-relaxed whitespace-pre-line">
+                  <div className="prose prose-sm max-w-none text-slate-700 bg-slate-50 p-4 rounded-xl border border-slate-100 leading-relaxed whitespace-pre-line text-xs sm:text-sm">
                     {problem?.description}
                   </div>
 
                   {problem?.sample_input && (
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Sample Input</h4>
                         <pre className="text-xs font-mono bg-slate-900 text-emerald-400 p-3 rounded-xl">
@@ -192,14 +221,18 @@ export default function ProblemPracticePage() {
         </div>
 
         {/* Right Pane: Monaco Editor */}
-        <div className="w-1/2 flex flex-col glass-card rounded-2xl border border-slate-200 overflow-hidden shadow-md">
-          <div className="h-12 bg-slate-50 border-b border-slate-200 px-4 flex items-center justify-between">
+        <div
+          className={`w-full lg:w-1/2 flex-col glass-card rounded-2xl border border-slate-200 overflow-hidden shadow-md min-h-0 ${
+            mobileActivePane === 'editor' ? 'flex flex-1' : 'hidden lg:flex'
+          }`}
+        >
+          <div className="h-12 bg-slate-50 border-b border-slate-200 px-4 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2">
               <Code2 className="w-4 h-4 text-indigo-600" />
               <select
                 value={language}
                 onChange={(e) => handleLanguageChange(e.target.value)}
-                className="text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg px-2.5 py-1"
+                className="text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg px-2.5 py-1 cursor-pointer"
               >
                 <option value="javascript">JavaScript (Node.js)</option>
                 <option value="python">Python 3</option>
@@ -209,15 +242,15 @@ export default function ProblemPracticePage() {
             </div>
           </div>
 
-          <div className="flex-1 relative">
+          <div className="flex-1 relative min-h-0">
             <MonacoEditorWrapper language={language} value={code} onChange={setCode} />
           </div>
 
-          <div className="h-14 bg-white border-t border-slate-200 px-4 flex items-center justify-end">
+          <div className="h-14 bg-white border-t border-slate-200 px-4 flex items-center justify-end shrink-0">
             <button
               onClick={handleSubmit}
               disabled={submitting}
-              className="py-2 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-200 flex items-center gap-2"
+              className="py-2.5 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-200 flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               <span>Submit Solution</span>
