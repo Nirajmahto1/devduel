@@ -23,7 +23,7 @@ async function getMatchDetails(req, res, next) {
 
 async function createPrivateRoom(req, res, next) {
   try {
-    const { difficulty } = req.body;
+    const { difficulty, durationMinutes } = req.body;
     const user = await User.findById(req.user.id);
 
     const problem = await Problem.findRandomByDifficulty(difficulty || null);
@@ -34,12 +34,16 @@ async function createPrivateRoom(req, res, next) {
       });
     }
 
+    // Default duration 30 mins (1800s), configurable between 5 mins (300s) and 60 mins (3600s)
+    const parsedMinutes = durationMinutes ? parseInt(durationMinutes, 10) : 30;
+    const duration_seconds = Math.min(3600, Math.max(300, (isNaN(parsedMinutes) ? 30 : parsedMinutes) * 60));
+
     const match = await Match.createMatch({
       player1_id: user.id,
       problem_id: problem.id,
       match_type: 'private',
       player1_rating_before: user.rating,
-      duration_seconds: 1800,
+      duration_seconds,
     });
 
     return res.status(201).json({
@@ -47,6 +51,7 @@ async function createPrivateRoom(req, res, next) {
       data: {
         matchId: match.id,
         inviteCode: match.invite_code,
+        durationSeconds: match.duration_seconds,
         problem: {
           id: problem.id,
           title: problem.title,
