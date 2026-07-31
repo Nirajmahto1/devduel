@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useSocket } from '../../context/SocketContext';
-import { Swords, X, Loader2 } from 'lucide-react';
+import { Swords, X, Loader2, Clock } from 'lucide-react';
 
 export default function QueueModal() {
-  const { isSearchingMatch, leaveQueue } = useSocket();
+  const { isSearchingMatch, queueDurationMinutes, leaveQueue } = useSocket();
   const [seconds, setSeconds] = useState(0);
 
   useEffect(() => {
@@ -39,7 +39,7 @@ export default function QueueModal() {
         {/* Close / Leave Button */}
         <button
           onClick={leaveQueue}
-          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all"
+          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all cursor-pointer"
           title="Cancel Queue"
         >
           <X className="w-5 h-5" />
@@ -56,8 +56,13 @@ export default function QueueModal() {
           Finding Opponent...
         </h3>
 
-        <p className="text-sm text-slate-500 mt-2 font-medium">
-          Searching for a balanced opponent within your Elo rating band.
+        <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 font-bold text-xs border border-indigo-100">
+          <Clock className="w-3.5 h-3.5" />
+          <span>{queueDurationMinutes === 60 ? '1 Hour Duel' : `${queueDurationMinutes} Mins Duel`}</span>
+        </div>
+
+        <p className="text-xs text-slate-500 mt-2 font-medium">
+          Searching for an opponent looking for a {queueDurationMinutes}m match in your Elo rating band.
         </p>
 
         {/* Elapsed Time Display */}
@@ -70,7 +75,7 @@ export default function QueueModal() {
         <div className="mt-8">
           <button
             onClick={leaveQueue}
-            className="w-full py-3 px-6 rounded-xl border border-slate-300 text-slate-700 font-semibold hover:bg-slate-100/80 transition-all text-sm shadow-sm active:scale-95"
+            className="w-full py-3 px-6 rounded-xl border border-slate-300 text-slate-700 font-semibold hover:bg-slate-100/80 transition-all text-sm shadow-sm active:scale-95 cursor-pointer"
           >
             Cancel Matchmaking
           </button>

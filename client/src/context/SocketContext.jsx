@@ -9,6 +9,7 @@ export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isSearchingMatch, setIsSearchingMatch] = useState(false);
+  const [queueDurationMinutes, setQueueDurationMinutes] = useState(30);
   const [matchData, setMatchData] = useState(null);
 
   useEffect(() => {
@@ -20,8 +21,11 @@ export const SocketProvider = ({ children }) => {
         s.on('connect', () => setIsConnected(true));
         s.on('disconnect', () => setIsConnected(false));
 
-        s.on('queue:waiting', () => {
+        s.on('queue:waiting', (data) => {
           setIsSearchingMatch(true);
+          if (data?.durationMinutes) {
+            setQueueDurationMinutes(data.durationMinutes);
+          }
         });
 
         s.on('queue:matched', (data) => {
@@ -56,10 +60,11 @@ export const SocketProvider = ({ children }) => {
     }
   }, [isAuthenticated, token]);
 
-  const joinQueue = () => {
+  const joinQueue = (durationMinutes = 30) => {
     const s = getSocket() || socket;
     if (s && isConnected) {
-      s.emit('queue:join');
+      setQueueDurationMinutes(durationMinutes);
+      s.emit('queue:join', { durationMinutes });
       setIsSearchingMatch(true);
     }
   };
@@ -82,6 +87,7 @@ export const SocketProvider = ({ children }) => {
         socket,
         isConnected,
         isSearchingMatch,
+        queueDurationMinutes,
         matchData,
         joinQueue,
         leaveQueue,

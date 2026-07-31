@@ -34,9 +34,13 @@ export default function DashboardPage() {
   const [featuredProblem, setFeaturedProblem] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Matchmaking Duration Selector Modal
+  const [matchModalOpen, setMatchModalOpen] = useState(false);
+  const [matchDuration, setMatchDuration] = useState(30);
+
   // Private Room Modal State
   const [privateModalOpen, setPrivateModalOpen] = useState(false);
-  const [durationMinutes, setDurationMinutes] = useState(30); // Default 30m, up to 60m (1h)
+  const [durationMinutes, setDurationMinutes] = useState(30);
   const [inviteCodeInput, setInviteCodeInput] = useState('');
   const [createdRoom, setCreatedRoom] = useState(null);
   const [copied, setCopied] = useState(false);
@@ -44,9 +48,8 @@ export default function DashboardPage() {
   const [creatingRoom, setCreatingRoom] = useState(false);
 
   useEffect(() => {
-    // If URL has ?findMatch=true trigger queue automatically
     if (searchParams.get('findMatch') === 'true') {
-      joinQueue();
+      setMatchModalOpen(true);
     }
 
     fetchDashboardData();
@@ -77,6 +80,11 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleStartMatchmaking = () => {
+    setMatchModalOpen(false);
+    joinQueue(matchDuration);
   };
 
   const handleCreatePrivateRoom = async () => {
@@ -152,7 +160,7 @@ export default function DashboardPage() {
 
           <div className="flex items-center gap-3">
             <button
-              onClick={joinQueue}
+              onClick={() => setMatchModalOpen(true)}
               className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-sm shadow-lg shadow-indigo-200 hover:shadow-xl transition-all flex items-center gap-2.5 active:scale-95 cursor-pointer"
             >
               <Swords className="w-5 h-5" />
@@ -288,7 +296,7 @@ export default function DashboardPage() {
               <div className="py-12 text-center text-slate-400">
                 <p className="text-sm font-medium">No matches played yet.</p>
                 <button
-                  onClick={joinQueue}
+                  onClick={() => setMatchModalOpen(true)}
                   className="mt-3 text-xs font-bold text-indigo-600 hover:underline cursor-pointer"
                 >
                   Join queue for your first duel!
@@ -352,6 +360,62 @@ export default function DashboardPage() {
           </div>
         </div>
       </main>
+
+      {/* Matchmaking Queue Duration Selector Modal */}
+      {matchModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="glass-card w-full max-w-md p-6 rounded-3xl shadow-2xl border border-white/80 relative">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+              <h3 className="text-lg font-bold text-slate-800 font-outfit flex items-center gap-2">
+                <Swords className="w-5 h-5 text-indigo-600" />
+                <span>Find 1v1 Ranked Match</span>
+              </h3>
+              <button
+                onClick={() => setMatchModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 text-sm font-bold p-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Select Desired Duel Duration</span>
+                </label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[15, 30, 45, 60].map((mins) => (
+                    <button
+                      key={mins}
+                      type="button"
+                      onClick={() => setMatchDuration(mins)}
+                      className={`py-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                        matchDuration === mins
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      {mins === 60 ? '1 Hour' : `${mins} Mins`}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-slate-400 mt-2 font-medium">
+                  You will be paired with an opponent searching for a {matchDuration}m match in your rating band.
+                </p>
+              </div>
+
+              <button
+                onClick={handleStartMatchmaking}
+                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-sm shadow-md shadow-indigo-200 hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+              >
+                <Swords className="w-4 h-4" />
+                <span>Start Matchmaking ({matchDuration}m)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Private Room Creator / Joiner Modal */}
       {privateModalOpen && (
